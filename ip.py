@@ -1,14 +1,23 @@
 from flask import Flask, request, render_template_string
 import logging
+from logging.handlers import RotatingFileHandler
+import os
 
 app = Flask(__name__)
 
-# Logger yapılandırması
-logging.basicConfig(
-    filename='ip.log',
-    level=logging.INFO,
-    format='%(asctime)s - IP: %(message)s - Tarayıcı: %(message)s'
-)
+# Log dizini ve dosyası: Log dosyalarının düzenli tutulması için bir klasör kullanılıyor
+log_dir = 'logger'
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'ip.log')
+
+# RotatingFileHandler kullanarak log dosyasının boyutu 100 KB'a ulaştığında yedek dosyalar oluşturulacak
+handler = RotatingFileHandler(log_file, maxBytes=100000, backupCount=3)
+formatter = logging.Formatter('%(asctime)s - IP: %(ip)s - Tarayıcı: %(user_agent)s')
+handler.setFormatter(formatter)
+
+logger = logging.getLogger('ip_logger')
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 # Ana sayfa için HTML içeriği
 INDEX_HTML = """
@@ -49,7 +58,7 @@ DATA_HTML = """
 </head>
 <body>
     <h1>Verileriniz Alındı.</h1>
-    <h2>2 Gün İçinde Gelecektir Sabırlı Olun.<h2>
+    <h2>2 Gün İçinde Gelecektir. Sabırlı Olun.</h2>
     <ul>
         <li><strong>IP Adresi:</strong> {{ ip_address }}</li>
         <li><strong>Tarayıcı:</strong> {{ user_agent }}</li>
@@ -60,19 +69,20 @@ DATA_HTML = """
 
 @app.route('/')
 def index():
-    """Verileriniz Alındı."""
     return render_template_string(INDEX_HTML)
 
 @app.route('/collect-data', methods=['POST'])
 def collect_data():
-    """Verileriniz Alındı."""
-    ip_address = request.remote_addr
+    # Proxy arkasındaysanız gerçek IP'yi almak için X-Forwarded-For kontrolü
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     user_agent = request.headers.get('User-Agent')
 
-    # Toplanan verileri .log dosyasına yaz
-    logging.info(f"IP Adresi: {ip_address}, Tarayıcı: {user_agent}")
+    # Logger'a ekstra veriler ekleyerek log kaydı alıyoruz
+    extra = {'ip': ip_address, 'user_agent': user_agent}
+    logger.info("", extra=extra)
 
     return render_template_string(DATA_HTML, ip_address=ip_address, user_agent=user_agent)
 
 if __name__ == '__main__':
+    # Production ortamında debug=False olmalıdır.
     app.run(debug=False, host='0.0.0.0', port=5000)
